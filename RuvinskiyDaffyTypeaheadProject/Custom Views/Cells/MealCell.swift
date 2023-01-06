@@ -19,7 +19,7 @@ class MealCell: UICollectionViewCell {
     }
     
     func set(meal: Meal, networkManager: NetworkManager) {
-        nameLabel.text = meal.id
+        nameLabel.text = meal.name
         mealImageView.networkManager = networkManager
         mealImageView.downloadImage(fromURL: meal.thumbnailUrl)
     }

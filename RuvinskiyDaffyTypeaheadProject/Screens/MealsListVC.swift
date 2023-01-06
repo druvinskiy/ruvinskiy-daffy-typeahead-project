@@ -65,8 +65,7 @@ class MealsListVC: DTDataLoadingVC {
             self.dismissLoadingView()
             
             switch result {
-            case .success(var meals):
-                meals = Meal.getSampleMeals()
+            case .success(let meals):
                 self.meals = meals.sorted()
                 self.updateUI(with: self.meals)
             case .failure(let error):
