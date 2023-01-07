@@ -60,7 +60,7 @@ class MealsListVC: DTDataLoadingVC {
     func getMeals() {
         showLoadingView()
         
-        networkManager.getAllMeals { [weak self] (result: Result<[Meal], DTError>) in
+        networkManager.getMeals { [weak self] (result: Result<[Meal], DTError>) in
             guard let self = self else { return }
             self.dismissLoadingView()
             

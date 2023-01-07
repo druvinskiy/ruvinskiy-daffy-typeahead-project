@@ -8,13 +8,10 @@
 import UIKit
 
 class NetworkManager {
-    
-    private var baseUrl: String
-    private var urlSession: URLSession
+    private let urlSession: URLSession
     let cache = NSCache<NSString, UIImage>()
     
-    init(baseUrl: String = "https://www.themealdb.com/api/json/v1/1/", urlSession: URLSession = URLSession.shared) {
-        self.baseUrl = baseUrl
+    init(urlSession: URLSession = URLSession.shared) {
         self.urlSession = urlSession
     }
     
@@ -33,28 +30,28 @@ class NetworkManager {
         }
     }
     
-    func getAllMeals(completed: @escaping (Result<[Meal], DTError>) -> Void) {
+    func getMeals(completed: @escaping (Result<[Meal], DTError>) -> Void) {
         getCategories {
             [weak self] (result: Result<[Category], DTError>) in
             guard let self = self else { return }
             
             switch result {
             case .success(let categories):
-                self.getAllMeals(for: categories, completed: completed)
+                self.getMeals(for: categories, completed: completed)
             case .failure(let error):
                 completed(.failure(error))
             }
         }
     }
     
-    private func getAllMeals(for categories: [Category], completed: @escaping (Result<[Meal], DTError>) -> Void) {
+    private func getMeals(for categories: [Category], completed: @escaping (Result<[Meal], DTError>) -> Void) {
         let dispatchGroup = DispatchGroup()
         var meals = [Meal]()
         var failure: DTError?
         
         for category in categories {
             dispatchGroup.enter()
-            self.getMeals(endpoint: Endpoint.meals(category: category.name).url) { (result: Result<[Meal], DTError>) in
+            self.getMeals(for: category) { (result: Result<[Meal], DTError>) in
                 dispatchGroup.leave()
                 switch result {
                 case .success(let response):
@@ -76,8 +73,8 @@ class NetworkManager {
         }
     }
     
-    private func getMeals(endpoint: URL?, completed: @escaping (Result<[Meal], DTError>) -> Void) {
-        fetchGenericJSONData(url: endpoint) { (result: Result<MealResponse, DTError>) in
+    private func getMeals(for category: Category, completed: @escaping (Result<[Meal], DTError>) -> Void) {
+        fetchGenericJSONData(url: Endpoint.meals(category: category.name).url) { (result: Result<MealResponse, DTError>) in
             switch result {
             case .success(let response):
                 completed(.success(response.meals))

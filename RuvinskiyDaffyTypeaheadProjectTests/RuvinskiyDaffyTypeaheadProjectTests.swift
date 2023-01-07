@@ -62,18 +62,17 @@ final class RuvinskiyDaffyTypeaheadProjectTests: XCTestCase, Mockable {
         testInvalidData(networkCall: networkManager.getCategories, url: nil, networkCallWithURL: nil)
     }
     
-    func testGetAllMeals() {
+    func testGetMeals() {
         MockURLProtocol.requestHandler = { request in
             return (HTTPURLResponse(), nil)
         }
         
         let exp = XCTestExpectation()
         
-        networkManager.getAllMeals { (result: Result<[Meal], DTError>) in
+        networkManager.getMeals { (result: Result<[Meal], DTError>) in
             exp.fulfill()
             switch result {
-            case .success(let meals):
-                print(meals)
+            case .success(_):
                 break
             case .failure(_):
                 XCTAssert(false)
@@ -82,9 +81,9 @@ final class RuvinskiyDaffyTypeaheadProjectTests: XCTestCase, Mockable {
         
         wait(for: [exp], timeout: 3)
         
-        testUnableToComplete(networkCall: networkManager.getAllMeals, url: nil, networkCallWithURL: nil)
-        test404(networkCall: networkManager.getAllMeals, url: nil, networkCallWithURL: nil)
-        testInvalidData(networkCall: networkManager.getAllMeals, url: nil, networkCallWithURL: nil)
+        testUnableToComplete(networkCall: networkManager.getMeals, url: nil, networkCallWithURL: nil)
+        test404(networkCall: networkManager.getMeals, url: nil, networkCallWithURL: nil)
+        testInvalidData(networkCall: networkManager.getMeals, url: nil, networkCallWithURL: nil)
     }
     
     func testFilterMeals() {
@@ -155,97 +154,102 @@ final class RuvinskiyDaffyTypeaheadProjectTests: XCTestCase, Mockable {
         wait(for: [exp], timeout: 3)
     }
     
-    func testUnableToComplete<T: Decodable>(networkCall: ((@escaping (Result<T, DTError>) -> Void) -> Void)?,
-                                            url: URL?,
-                                            networkCallWithURL: ((URL?, @escaping (Result<T, DTError>) -> Void) -> Void)?) {
-        let exp = XCTestExpectation()
-        
-        MockURLProtocol.requestHandler = { request in
-            return (HTTPURLResponse(), DTError.unableToComplete)
-        }
-        
-        let completion = {
-            (result: Result<T, DTError>) in
-            exp.fulfill()
+    func testUnableToComplete<T: Decodable>(
+        networkCall: ((@escaping (Result<T, DTError>) -> Void) -> Void)?,
+        url: URL?,
+        networkCallWithURL: ((URL?, @escaping (Result<T, DTError>) -> Void) -> Void)?) {
             
-            switch result {
-            case .success(_):
-                XCTAssert(false)
-            case .failure(let error):
-                XCTAssertTrue(error == .unableToComplete)
+            let exp = XCTestExpectation()
+            
+            MockURLProtocol.requestHandler = { request in
+                return (HTTPURLResponse(), DTError.unableToComplete)
             }
+            
+            let completion = {
+                (result: Result<T, DTError>) in
+                exp.fulfill()
+                
+                switch result {
+                case .success(_):
+                    XCTAssert(false)
+                case .failure(let error):
+                    XCTAssertTrue(error == .unableToComplete)
+                }
+            }
+            
+            if let networkCallWithURL = networkCallWithURL {
+                networkCallWithURL(url, completion)
+            } else if let networkCall = networkCall {
+                networkCall(completion)
+            }
+            
+            wait(for: [exp], timeout: 3)
         }
-        
-        if let networkCallWithURL = networkCallWithURL {
-            networkCallWithURL(url, completion)
-        } else if let networkCall = networkCall {
-            networkCall(completion)
-        }
-        
-        wait(for: [exp], timeout: 3)
-    }
     
-    func test404<T: Decodable>(networkCall: ((@escaping (Result<T, DTError>) -> Void) -> Void)?,
-                               url: URL?,
-                               networkCallWithURL: ((URL?, @escaping (Result<T, DTError>) -> Void) -> Void)?) {
-        let exp = XCTestExpectation()
-        
-        MockURLProtocol.requestHandler = { request in
-            XCTAssertNotNil(request.url)
+    func test404<T: Decodable>(
+        networkCall: ((@escaping (Result<T, DTError>) -> Void) -> Void)?,
+        url: URL?,
+        networkCallWithURL: ((URL?, @escaping (Result<T, DTError>) -> Void) -> Void)?) {
+            let exp = XCTestExpectation()
             
-            let response = HTTPURLResponse(url: request.url!, statusCode: 404, httpVersion: nil, headerFields: nil)
-            return (response ?? HTTPURLResponse(), nil)
-        }
-        
-        let completion = {
-            (result: Result<T, DTError>) in
-            exp.fulfill()
-            
-            switch result {
-            case .success(_):
-                XCTAssert(false)
-            case .failure(let error):
-                XCTAssertTrue(error == .invalidResponse)
+            MockURLProtocol.requestHandler = { request in
+                XCTAssertNotNil(request.url)
+                
+                let response = HTTPURLResponse(url: request.url!, statusCode: 404, httpVersion: nil, headerFields: nil)
+                return (response ?? HTTPURLResponse(), nil)
             }
+            
+            let completion = {
+                (result: Result<T, DTError>) in
+                exp.fulfill()
+                
+                switch result {
+                case .success(_):
+                    XCTAssert(false)
+                case .failure(let error):
+                    XCTAssertTrue(error == .invalidResponse)
+                }
+            }
+            
+            if let networkCallWithURL = networkCallWithURL {
+                networkCallWithURL(url, completion)
+            } else if let networkCall = networkCall {
+                networkCall(completion)
+            }
+            
+            wait(for: [exp], timeout: 3)
         }
-        
-        if let networkCallWithURL = networkCallWithURL {
-            networkCallWithURL(url, completion)
-        } else if let networkCall = networkCall {
-            networkCall(completion)
-        }
-        
-        wait(for: [exp], timeout: 3)
-    }
     
-    func testInvalidData<T: Decodable>(networkCall: ((@escaping (Result<T, DTError>) -> Void) -> Void)?,
-                                       url: URL?,
-                                       networkCallWithURL: ((URL?, @escaping (Result<T, DTError>) -> Void) -> Void)?) {
-        let exp = XCTestExpectation()
-        
-        MockURLProtocol.requestHandler = { request in
-            MockURLProtocol.testURLs[request.url] = nil
-            return (HTTPURLResponse(), nil)
-        }
-        
-        let completion = {
-            (result: Result<T, DTError>) in
-            exp.fulfill()
+    func testInvalidData<T: Decodable>(
+        networkCall: ((@escaping (Result<T, DTError>) -> Void) -> Void)?,
+        url: URL?,
+        networkCallWithURL: ((URL?, @escaping (Result<T, DTError>) -> Void) -> Void)?) {
             
-            switch result {
-            case .success(_):
-                XCTAssert(false)
-            case .failure(let error):
-                XCTAssertTrue(error == .invalidData)
+            let exp = XCTestExpectation()
+            
+            MockURLProtocol.requestHandler = { request in
+                MockURLProtocol.testURLs[request.url] = nil
+                return (HTTPURLResponse(), nil)
             }
+            
+            let completion = {
+                (result: Result<T, DTError>) in
+                exp.fulfill()
+                
+                switch result {
+                case .success(_):
+                    XCTAssert(false)
+                case .failure(let error):
+                    XCTAssertTrue(error == .invalidData)
+                }
+            }
+            
+            if let networkCallWithURL = networkCallWithURL {
+                networkCallWithURL(url, completion)
+            } else if let networkCall = networkCall {
+                networkCall(completion)
+            }
+            
+            wait(for: [exp], timeout: 3)
         }
-        
-        if let networkCallWithURL = networkCallWithURL {
-            networkCallWithURL(url, completion)
-        } else if let networkCall = networkCall {
-            networkCall(completion)
-        }
-        
-        wait(for: [exp], timeout: 3)
-    }
 }
